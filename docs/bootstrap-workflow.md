@@ -7,19 +7,19 @@
 2. 取得專案倉庫與必要的 API/工具憑證。
 
 ## 2. 專案初始化
-1. 執行 `python cli/agent_cli.py init <project-path>` 生成目錄結構。
-2. 檢視 `project.json` 並填入專案實際資訊（名稱、描述、代理人角色）。
-3. 將 `docs/decisions/adr-0001.md` 更新為真實決策內容。
+1. 執行 `python cli/agent_cli.py init <project-path>` 生成目錄結構（必要時以 `--force` 重置）。
+2. 檢視 `project.json` 並填入專案實際資訊（名稱、描述、版本、代理人角色與文件路徑）。
+3. 將 `docs/decisions/adr-0001.md` 更新為真實決策內容，並確認 `documents` 欄位指向存在的檔案。
 
 ## 3. 任務啟動
 1. 依需求更新 `todo.md`，建立首批任務條目與狀態。
 2. 於 `development.log` 開啟新區塊，記錄預計交付內容與測試策略。
-3. 若需要範本程式碼，使用 `scaffold` 導入對應樣板。
+3. 若需要範本程式碼，使用 `scaffold` 導入對應樣板（如 `python-fastapi`）。
 
 ## 4. 開發與驗證
 1. 完成程式碼與文件變更後執行測試（`pytest`、`uvicorn` smoke test 等）。
-2. 透過 `python cli/agent_cli.py validate <project-path>` 確認結構與中繼資料完整。
-3. 將測試結果與觀察寫入 `development.log`。
+2. 透過 `python cli/agent_cli.py validate <project-path>` 確認目錄、`project.json` 欄位與文件路徑皆符合規範。
+3. 將測試結果與觀察寫入 `development.log`，並視需求更新 `project.json` 版本號或代理人責任。
 
 ## 5. 提交與交付
 1. 使用 Conventional Commit 撰寫提交訊息並推送分支。

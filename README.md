@@ -15,17 +15,72 @@
 # 1. 建議使用虛擬環境（可選）
 python -m venv .venv && source .venv/bin/activate
 
-# 2. 查看 CLI 使用說明
+# 2. 查看 CLI 使用說明與可用子命令
 python cli/agent_cli.py --help
 
-# 3. 初始化專案骨架
-python cli/agent_cli.py init /path/to/your/project
+# 3. 初始化專案骨架（可加上 --force 重新產生）
+python cli/agent_cli.py init ./example-project
 
-# 4. 驗證專案結構
-python cli/agent_cli.py validate /path/to/your/project
+# 4. 匯入樣板（目前提供 python-fastapi，必要時可加 --force）
+python cli/agent_cli.py scaffold ./example-project --template python-fastapi
 
-# 5. 匯入樣板（目前提供 python-fastapi）
-python cli/agent_cli.py scaffold /path/to/your/project --template python-fastapi
+# 5. 驗證專案結構與中繼資料
+python cli/agent_cli.py validate ./example-project
+```
+
+> 💡 `init` 會建立 `project.json`、基礎文件與目錄結構；`scaffold` 會將樣板程式碼複製到指定資料夾；`validate` 則負責檢查文件與 `project.json` 是否符合規範。
+
+### `project.json` 範例
+
+初始化後請依實際專案更新 `project.json`。下方範例展示所有必填欄位與常見的代理人定義：
+
+```json
+{
+  "name": "Document Scanner MVP",
+  "description": "Pipeline for extracting structured data from PDFs",
+  "version": "0.1.0",
+  "agents": [
+    {
+      "id": "orchestrator",
+      "role": "planning",
+      "responsibilities": [
+        "Refine backlog items",
+        "Coordinate development log updates"
+      ]
+    },
+    {
+      "id": "builder",
+      "role": "implementation",
+      "responsibilities": [
+        "Deliver FastAPI endpoints",
+        "Maintain unit tests"
+      ]
+    }
+  ],
+  "documents": {
+    "project": "project.md",
+    "todo": "todo.md",
+    "log": "development.log"
+  }
+}
+```
+
+### 代理人互動範例流程
+
+```text
+使用者：我要建立一個文件掃描系統，請按照規範建立 MVP。
+
+代理人：
+1. 執行 `python cli/agent_cli.py init ./document-scanner` 建立骨架。
+2. 依需求更新 `project.json` 與 `todo.md`。
+3. 執行 `python cli/agent_cli.py scaffold ./document-scanner --template python-fastapi` 匯入 API 範本。
+4. 補上樣板所需環境：`python -m pip install -r ./document-scanner/requirements.txt`。
+5. 驗證結構：`python cli/agent_cli.py validate ./document-scanner`。
+6. 執行 `pytest` 確認樣板測試通過並於 `development.log` 記錄。
+
+使用者：下一步請完成 T002。
+
+代理人：查閱 `todo.md` 及 `development.log`，依照任務循環繼續實作。
 ```
 
 ---
