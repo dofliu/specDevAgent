@@ -12,16 +12,19 @@
 
 ## 🚀 快速開始
 ```bash
-# 1. 安裝環境
-pip install -r requirements.txt
+# 1. 建議使用虛擬環境（可選）
+python -m venv .venv && source .venv/bin/activate
 
-# 2. 初始化專案骨架
+# 2. 查看 CLI 使用說明
+python cli/agent_cli.py --help
+
+# 3. 初始化專案骨架
 python cli/agent_cli.py init /path/to/your/project
 
-# 3. 驗證專案結構
+# 4. 驗證專案結構
 python cli/agent_cli.py validate /path/to/your/project
 
-# 4. 匯入樣板（以 FastAPI 為例）
+# 5. 匯入樣板（目前提供 python-fastapi）
 python cli/agent_cli.py scaffold /path/to/your/project --template python-fastapi
 ```
 
@@ -31,16 +34,12 @@ python cli/agent_cli.py scaffold /path/to/your/project --template python-fastapi
 ```
 specDevAgent/
 ├─ agent.md                ← 代理人主要規範文件
-├─ templates/              ← 語言樣板（Python / Node / React）
+├─ templates/              ← 語言樣板（目前提供 Python FastAPI）
 ├─ schema/                 ← JSON Schema 格式驗證
 ├─ cli/                    ← CLI 工具（init / validate / scaffold）
 ├─ docs/                   ← 說明文件與工作流程
 │  ├─ overview.md
-│  ├─ bootstrap-workflow.md
-│  └─ faq.md
-├─ .github/                ← PR / Issue 模板與 CI 驗證
-│  ├─ PULL_REQUEST_TEMPLATE.md
-│  └─ ISSUE_TEMPLATE.md
+│  └─ bootstrap-workflow.md
 └─ LICENSE
 ```
 
@@ -49,8 +48,8 @@ specDevAgent/
 ## 💡 功能亮點
 - **任務循環（PLAN → CHANGES → TEST → GIT → LOG → DoD）**：確保每個任務皆可追蹤與驗證。
 - **文件驅動開發**：以 `project.md`, `todo.md`, `development.log` 為核心文件，確保 AI 能讀懂專案上下文。
-- **多語樣板支援**：可快速建立 Python FastAPI、Node Express、React Vite 等專案骨架。
-- **CI / PR 標準整合**：預設 Conventional Commits、PR 驗收檢查與自動驗證。
+- **樣板支援**：提供 Python FastAPI 的最小可運行樣板（含應用程式與測試）。
+- **CI / PR 標準整合**：可依專案需求擴充 Conventional Commits、PR 驗收檢查與自動驗證。
 
 ---
 
