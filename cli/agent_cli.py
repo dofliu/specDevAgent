@@ -126,6 +126,14 @@ def validate_metadata(metadata: Dict) -> List[str]:
         if field not in metadata:
             issues.append(f"Metadata missing required field: {field}")
 
+    for text_field in ["name", "description"]:
+        if text_field in metadata:
+            value = metadata[text_field]
+            if not isinstance(value, str) or not value.strip():
+                issues.append(
+                    f"Metadata field '{text_field}' must be a non-empty string."
+                )
+
     if "version" in metadata and isinstance(metadata["version"], str):
         if not metadata["version"].count(".") == 2:
             issues.append("Metadata version should follow semantic versioning (e.g. 0.1.0).")
@@ -145,6 +153,22 @@ def validate_metadata(metadata: Dict) -> List[str]:
                         issues.append(f"Agent entry #{index} missing '{key}'.")
                 if "responsibilities" in agent and not isinstance(agent["responsibilities"], list):
                     issues.append(f"Agent entry #{index} field 'responsibilities' must be a list.")
+                elif isinstance(agent.get("responsibilities"), list):
+                    if not agent["responsibilities"]:
+                        issues.append(
+                            f"Agent entry #{index} must declare at least one responsibility."
+                        )
+                    for responsibility in agent["responsibilities"]:
+                        if not isinstance(responsibility, str) or not responsibility.strip():
+                            issues.append(
+                                f"Agent entry #{index} has an invalid responsibility entry;"
+                                " each responsibility must be a non-empty string."
+                            )
+
+                if "id" in agent and not isinstance(agent["id"], str):
+                    issues.append(f"Agent entry #{index} field 'id' must be a string.")
+                if "role" in agent and not isinstance(agent["role"], str):
+                    issues.append(f"Agent entry #{index} field 'role' must be a string.")
 
     if "documents" in metadata:
         documents = metadata["documents"]
@@ -154,6 +178,11 @@ def validate_metadata(metadata: Dict) -> List[str]:
             for key in ["project", "todo", "log"]:
                 if key not in documents:
                     issues.append(f"Metadata 'documents' missing '{key}'.")
+            for key, value in documents.items():
+                if not isinstance(value, str) or not value.strip():
+                    issues.append(
+                        f"Metadata document reference '{key}' must be a non-empty string."
+                    )
 
     return issues
 
@@ -169,6 +198,17 @@ def validate_project(args: argparse.Namespace) -> None:
     metadata = load_project_metadata(root)
     metadata_issues = validate_metadata(metadata)
 
+    document_reference_issues: List[str] = []
+    documents = metadata.get("documents", {}) if isinstance(metadata, dict) else {}
+    if isinstance(documents, dict):
+        for key, relative_path in documents.items():
+            if isinstance(relative_path, str) and relative_path.strip():
+                referenced_path = root / relative_path
+                if not referenced_path.exists():
+                    document_reference_issues.append(
+                        f"Metadata document '{key}' points to missing file: {relative_path}"
+                    )
+
     issues: List[str] = []
     if missing_dirs:
         issues.append("Missing directories:\n  - " + "\n  - ".join(missing_dirs))
@@ -176,6 +216,8 @@ def validate_project(args: argparse.Namespace) -> None:
         issues.append("Missing files:\n  - " + "\n  - ".join(missing_files))
     if metadata_issues:
         issues.append("Metadata issues:\n  - " + "\n  - ".join(metadata_issues))
+    if document_reference_issues:
+        issues.append("Document references:\n  - " + "\n  - ".join(document_reference_issues))
 
     if issues:
         print("Validation failed:")
