@@ -1,1 +1,85 @@
-{"type":"object","properties":{"name":{"type":"string"}}}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "specDevAgent Project Metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "description",
+    "version",
+    "agents",
+    "documents"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 3,
+      "description": "Human-readable project name"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Short statement describing the problem and goal"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version that tracks the scaffold revision"
+    },
+    "agents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "role", "responsibilities"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "description": "Kebab-case identifier"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "developer",
+              "orchestrator",
+              "qa",
+              "researcher",
+              "reviewer"
+            ]
+          },
+          "responsibilities": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 3
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "documents": {
+      "type": "object",
+      "required": ["project", "todo", "log"],
+      "properties": {
+        "project": {
+          "type": "string",
+          "pattern": ".*\\.md$",
+          "description": "Path to the canonical project overview document"
+        },
+        "todo": {
+          "type": "string",
+          "pattern": ".*\\.md$",
+          "description": "Path to the backlog document"
+        },
+        "log": {
+          "type": "string",
+          "description": "Path to the running development log"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
