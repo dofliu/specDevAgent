@@ -26,9 +26,12 @@ python cli/agent_cli.py scaffold ./example-project --template python-fastapi
 
 # 5. 驗證專案結構與中繼資料
 python cli/agent_cli.py validate ./example-project
+
+# 6. 針對 project.json 執行靜態檢查（可加 --check-documents）
+python cli/agent_cli.py lint-metadata ./example-project --check-documents
 ```
 
-> 💡 `init` 會建立 `project.json`、基礎文件與目錄結構；`scaffold` 會將樣板程式碼複製到指定資料夾；`validate` 則負責檢查文件與 `project.json` 是否符合規範。
+> 💡 `init` 會建立 `project.json`、基礎文件與目錄結構；`scaffold` 會將樣板程式碼複製到指定資料夾；`validate` 檢查整體結構是否符合規範；`lint-metadata` 則專注於 `project.json` 的欄位格式、角色枚舉與文件路徑引用，適合在提交前快速檢查。
 
 ### `project.json` 範例
 
@@ -41,16 +44,16 @@ python cli/agent_cli.py validate ./example-project
   "version": "0.1.0",
   "agents": [
     {
-      "id": "orchestrator",
-      "role": "planning",
+      "id": "orchestrator-bot",
+      "role": "orchestrator",
       "responsibilities": [
         "Refine backlog items",
         "Coordinate development log updates"
       ]
     },
     {
-      "id": "builder",
-      "role": "implementation",
+      "id": "builder-bot",
+      "role": "developer",
       "responsibilities": [
         "Deliver FastAPI endpoints",
         "Maintain unit tests"
@@ -65,6 +68,12 @@ python cli/agent_cli.py validate ./example-project
 }
 ```
 
+### Metadata 靜態檢查指引
+
+- 執行 `python cli/agent_cli.py lint-metadata <project-path>` 可單獨檢查 `project.json`，使用 `--check-documents` 時會確認 `project.md`、`todo.md`、`development.log` 等路徑是否存在。
+- `agents[].id` 必須為 kebab-case（例：`orchestrator-bot`），`agents[].role` 則須為 `developer`、`orchestrator`、`qa`、`researcher` 或 `reviewer` 之一。
+- `name`、`description` 與 `responsibilities` 皆需為非空字串，`documents.project` / `documents.todo` 需指向 `.md` 檔案。
+
 ### 代理人互動範例流程
 
 ```text
@@ -76,7 +85,8 @@ python cli/agent_cli.py validate ./example-project
 3. 執行 `python cli/agent_cli.py scaffold ./document-scanner --template python-fastapi` 匯入 API 範本。
 4. 補上樣板所需環境：`python -m pip install -r ./document-scanner/requirements.txt`。
 5. 驗證結構：`python cli/agent_cli.py validate ./document-scanner`。
-6. 執行 `pytest` 確認樣板測試通過並於 `development.log` 記錄。
+6. 執行 `python cli/agent_cli.py lint-metadata ./document-scanner --check-documents`，確保 `project.json` 維持可讀性與一致性。
+7. 執行 `pytest` 確認樣板測試通過並於 `development.log` 記錄。
 
 使用者：下一步請完成 T002。
 
@@ -104,6 +114,7 @@ specDevAgent/
 - **任務循環（PLAN → CHANGES → TEST → GIT → LOG → DoD）**：確保每個任務皆可追蹤與驗證。
 - **文件驅動開發**：以 `project.md`, `todo.md`, `development.log` 為核心文件，確保 AI 能讀懂專案上下文。
 - **樣板支援**：提供 Python FastAPI 的最小可運行樣板（含應用程式與測試）。
+- **Metadata 靜態分析**：`lint-metadata` 子命令確保 `project.json` 符合 JSON Schema 與角色/ID 規範，並可選擇檢查文件路徑是否存在。
 - **CI / PR 標準整合**：可依專案需求擴充 Conventional Commits、PR 驗收檢查與自動驗證。
 
 ---

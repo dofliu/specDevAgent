@@ -8,7 +8,7 @@ dashboard before diving into the detailed checklists that follow.
 | P0 | Automate CLI regression coverage | Tooling Guild | 🟡 Drafting pytest harness | Demo failing+passing tests in CI |
 | P1 | Package and version templates | Template Working Group | ⚪ Not started | Design registry contract |
 | P1 | Expand agent-facing docs/playbooks | Docs Team | 🟡 Outline ready | Publish playbook draft |
-| P2 | Enforce metadata quality via schema + linters | Platform Team | ⚪ Not started | CLI exposes `metadata lint` |
+| P2 | Enforce metadata quality via schema + linters | Platform Team | 🟢 CLI lint shipped | Add pre-commit hook + schema patterns |
 
 ---
 
@@ -43,7 +43,7 @@ be published and reused independently.
 ## 4. Enforce Metadata Quality via Schema + Linters
 **Objective**: keep `project.json` trustworthy by pairing schema constraints with automated linting.
 
-1. Expand `schema/project.schema.json` with pattern constraints for identifiers (e.g., kebab-case agent IDs) and enumerations for supported roles/responsibilities.
-2. Implement a `python -m metadata_lint` command (or CLI subcommand) that loads the schema, reports violations with file/field context, and suggests fixes.
-3. Add pre-commit hooks so contributors run the metadata lint automatically before committing.
-4. **Exit criteria**: `python cli/agent_cli.py lint-metadata` returns zero issues for valid payloads and blocks commits otherwise.
+1. 擴充 `schema/project.schema.json` 的欄位限制（kebab-case ID、角色枚舉、Markdown 路徑）——**已完成**。
+2. 導入 `python cli/agent_cli.py lint-metadata` 子命令，獨立檢查中繼資料並支援 `--check-documents` ——**已完成**。
+3. 下一步：加入 pre-commit hook 與 CI 工作，確保 lint-metadata 自動執行。
+4. **Exit criteria**: `python cli/agent_cli.py lint-metadata` 與 pre-commit/CI 皆必須阻擋違規的 metadata 內容，並提供清楚的欄位/檔名提示。

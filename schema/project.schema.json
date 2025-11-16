@@ -13,11 +13,12 @@
   "properties": {
     "name": {
       "type": "string",
-      "minLength": 1,
+      "minLength": 3,
       "description": "Human-readable project name"
     },
     "description": {
       "type": "string",
+      "minLength": 10,
       "description": "Short statement describing the problem and goal"
     },
     "version": {
@@ -34,16 +35,25 @@
         "properties": {
           "id": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "description": "Kebab-case identifier"
           },
           "role": {
             "type": "string",
-            "minLength": 1
+            "enum": [
+              "developer",
+              "orchestrator",
+              "qa",
+              "researcher",
+              "reviewer"
+            ]
           },
           "responsibilities": {
             "type": "array",
+            "minItems": 1,
             "items": {
-              "type": "string"
+              "type": "string",
+              "minLength": 3
             }
           }
         },
@@ -56,10 +66,12 @@
       "properties": {
         "project": {
           "type": "string",
+          "pattern": ".*\\.md$",
           "description": "Path to the canonical project overview document"
         },
         "todo": {
           "type": "string",
+          "pattern": ".*\\.md$",
           "description": "Path to the backlog document"
         },
         "log": {

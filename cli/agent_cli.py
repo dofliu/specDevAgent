@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -28,6 +29,15 @@ BASE_STRUCTURE_FILES: Dict[str, str] = {
     "docs/process/plan.md": "# Iteration Planning\n\nDetail objectives, scope, and deliverables for the current cycle.\n",
     "docs/process/retro.md": "# Iteration Retrospective\n\nRecord wins, challenges, and follow-up actions after each cycle.\n",
     "docs/decisions/adr-0001.md": "# ADR-0001 — Project Initialization\n\n- **Status:** Accepted\n- **Context:** Describe the reason for choosing this scaffold.\n- **Decision:** Document the agreed approach.\n- **Consequences:** Capture trade-offs and future considerations.\n",
+}
+
+AGENT_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+ALLOWED_AGENT_ROLES = {
+    "orchestrator",
+    "developer",
+    "reviewer",
+    "qa",
+    "researcher",
 }
 
 PROJECT_METADATA_TEMPLATE = {
@@ -109,8 +119,8 @@ def init_project(args: argparse.Namespace) -> None:
             print(f"  - {path.relative_to(root)}")
 
 
-def load_project_metadata(project_root: Path) -> Dict:
-    metadata_path = project_root / "project.json"
+def load_project_metadata(project_root: Path, *, metadata_path: Path | None = None) -> Dict:
+    metadata_path = metadata_path or (project_root / "project.json")
     if not metadata_path.is_file():
         raise ValidationError("Missing project.json metadata file.")
     try:
@@ -167,8 +177,19 @@ def validate_metadata(metadata: Dict) -> List[str]:
 
                 if "id" in agent and not isinstance(agent["id"], str):
                     issues.append(f"Agent entry #{index} field 'id' must be a string.")
+                elif isinstance(agent.get("id"), str):
+                    if not AGENT_ID_PATTERN.fullmatch(agent["id"].strip()):
+                        issues.append(
+                            f"Agent entry #{index} id must be kebab-case (e.g. orchestrator-bot)."
+                        )
                 if "role" in agent and not isinstance(agent["role"], str):
                     issues.append(f"Agent entry #{index} field 'role' must be a string.")
+                elif isinstance(agent.get("role"), str):
+                    if agent["role"] not in ALLOWED_AGENT_ROLES:
+                        issues.append(
+                            "Agent role must be one of: "
+                            + ", ".join(sorted(ALLOWED_AGENT_ROLES))
+                        )
 
     if "documents" in metadata:
         documents = metadata["documents"]
@@ -183,6 +204,17 @@ def validate_metadata(metadata: Dict) -> List[str]:
                     issues.append(
                         f"Metadata document reference '{key}' must be a non-empty string."
                     )
+                elif not value.endswith(".md") and key != "log":
+                    issues.append(
+                        f"Metadata document '{key}' should reference a markdown file (got '{value}')."
+                    )
+
+            unexpected_keys = set(documents) - {"project", "todo", "log"}
+            if unexpected_keys:
+                issues.append(
+                    "Metadata 'documents' includes unsupported keys: "
+                    + ", ".join(sorted(unexpected_keys))
+                )
 
     return issues
 
@@ -197,17 +229,7 @@ def validate_project(args: argparse.Namespace) -> None:
 
     metadata = load_project_metadata(root)
     metadata_issues = validate_metadata(metadata)
-
-    document_reference_issues: List[str] = []
-    documents = metadata.get("documents", {}) if isinstance(metadata, dict) else {}
-    if isinstance(documents, dict):
-        for key, relative_path in documents.items():
-            if isinstance(relative_path, str) and relative_path.strip():
-                referenced_path = root / relative_path
-                if not referenced_path.exists():
-                    document_reference_issues.append(
-                        f"Metadata document '{key}' points to missing file: {relative_path}"
-                    )
+    document_reference_issues = collect_document_reference_issues(root, metadata)
 
     issues: List[str] = []
     if missing_dirs:
@@ -226,6 +248,47 @@ def validate_project(args: argparse.Namespace) -> None:
         raise ValidationError("Project validation did not pass.")
 
     print(f"Project at {root} matches the expected specDevAgent scaffold.")
+
+
+def collect_document_reference_issues(root: Path, metadata: Dict) -> List[str]:
+    issues: List[str] = []
+    documents = metadata.get("documents", {}) if isinstance(metadata, dict) else {}
+    if isinstance(documents, dict):
+        for key, relative_path in documents.items():
+            if isinstance(relative_path, str) and relative_path.strip():
+                referenced_path = root / relative_path
+                if not referenced_path.exists():
+                    issues.append(
+                        f"Metadata document '{key}' points to missing file: {relative_path}"
+                    )
+    return issues
+
+
+def lint_metadata(args: argparse.Namespace) -> None:
+    target = Path(args.path).expanduser().resolve()
+    if target.is_dir():
+        metadata_path = target / "project.json"
+        project_root = target
+    else:
+        metadata_path = target
+        project_root = metadata_path.parent
+
+    metadata = load_project_metadata(project_root, metadata_path=metadata_path)
+    metadata_issues = validate_metadata(metadata)
+
+    document_reference_issues: List[str] = []
+    if args.check_documents:
+        document_reference_issues = collect_document_reference_issues(project_root, metadata)
+
+    if metadata_issues or document_reference_issues:
+        print("Metadata lint failed:")
+        if metadata_issues:
+            print("Schema issues:\n  - " + "\n  - ".join(metadata_issues))
+        if document_reference_issues:
+            print("Document references:\n  - " + "\n  - ".join(document_reference_issues))
+        raise ValidationError("Metadata lint did not pass.")
+
+    print(f"Metadata at {metadata_path} satisfies specDevAgent lint rules.")
 
 
 def scaffold_project(args: argparse.Namespace) -> None:
@@ -279,6 +342,27 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     scaffold_parser.add_argument("--template", required=True, help="Template name (e.g. python-fastapi)")
     scaffold_parser.add_argument("--force", action="store_true", help="Overwrite files that already exist")
     scaffold_parser.set_defaults(func=scaffold_project)
+
+    lint_parser = subparsers.add_parser(
+        "lint-metadata",
+        help="Check project.json for schema and policy violations",
+        description=(
+            "Lint project metadata independently from the rest of the scaffold. "
+            "See docs/overview.md#metadata-linting for guidance."
+        ),
+    )
+    lint_parser.add_argument(
+        "path",
+        nargs="?",
+        default=Path.cwd(),
+        help="Project directory (default: current working directory) or path to project.json",
+    )
+    lint_parser.add_argument(
+        "--check-documents",
+        action="store_true",
+        help="Ensure referenced documents exist relative to the project root",
+    )
+    lint_parser.set_defaults(func=lint_metadata)
 
     return parser.parse_args(argv)
 
