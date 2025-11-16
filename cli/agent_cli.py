@@ -69,6 +69,12 @@ class ValidationError(Exception):
     """Raised when the project structure or metadata fails validation."""
 
 
+def available_templates() -> List[str]:
+    if not TEMPLATE_ROOT.is_dir():
+        return []
+    return sorted(entry.name for entry in TEMPLATE_ROOT.iterdir() if entry.is_dir())
+
+
 def ensure_directories(root: Path, directories: Iterable[str]) -> None:
     for directory in directories:
         target = root / directory
@@ -291,6 +297,108 @@ def lint_metadata(args: argparse.Namespace) -> None:
     print(f"Metadata at {metadata_path} satisfies specDevAgent lint rules.")
 
 
+def status_project(args: argparse.Namespace) -> None:
+    root = Path(args.path).expanduser().resolve()
+    if not root.exists():
+        raise ValidationError(f"Project path does not exist: {root}")
+
+    print(f"Project status for {root}:")
+
+    missing_dirs = [d for d in BASE_STRUCTURE_DIRS if not (root / d).is_dir()]
+    missing_files = [f for f in BASE_STRUCTURE_FILES if not (root / f).is_file()]
+
+    if missing_dirs:
+        print("- Directory skeleton: missing entries ->")
+        for directory in missing_dirs:
+            print(f"    • {directory}")
+    else:
+        print("- Directory skeleton: all expected folders are present.")
+
+    if missing_files:
+        print("- Baseline files: missing entries ->")
+        for file_name in missing_files:
+            print(f"    • {file_name}")
+    else:
+        print("- Baseline files: all starter docs exist.")
+
+    metadata = None
+    metadata_error: str | None = None
+    try:
+        metadata = load_project_metadata(root)
+    except ValidationError as exc:
+        metadata_error = str(exc)
+
+    metadata_issues: List[str] = []
+    document_reference_issues: List[str] = []
+    if metadata is not None:
+        metadata_issues = validate_metadata(metadata)
+        document_reference_issues = collect_document_reference_issues(root, metadata)
+
+        name = metadata.get("name", "<unknown>")
+        version = metadata.get("version", "?<no version>")
+        print(f"- Metadata: {name} (version {version})")
+
+        agents = metadata.get("agents")
+        if isinstance(agents, list):
+            roles = sorted(
+                {
+                    agent.get("role", "?")
+                    for agent in agents
+                    if isinstance(agent, dict) and agent.get("role")
+                }
+            )
+            print(
+                f"  • Agents: {len(agents)} registered"
+                + (f" — roles: {', '.join(roles)}" if roles else "")
+            )
+
+        documents = metadata.get("documents")
+        if isinstance(documents, dict):
+            print("  • Documents:")
+            for key in sorted(documents):
+                value = documents[key]
+                if isinstance(value, str) and value.strip():
+                    referenced_path = root / value
+                    status = "found" if referenced_path.exists() else "missing"
+                    print(f"    - {key}: {value} ({status})")
+                else:
+                    print(f"    - {key}: <invalid reference>")
+
+    if metadata_error:
+        print(f"- Metadata error: {metadata_error}")
+
+    if metadata_issues:
+        print("- Metadata schema warnings:")
+        for issue in metadata_issues:
+            print(f"    • {issue}")
+
+    if document_reference_issues:
+        print("- Document reference warnings:")
+        for issue in document_reference_issues:
+            print(f"    • {issue}")
+
+    available = available_templates()
+    if available:
+        print("- Available templates:")
+        for template in available:
+            print(f"    • {template}")
+    else:
+        print("- Available templates: none detected.")
+
+    issue_count = (
+        len(missing_dirs)
+        + len(missing_files)
+        + len(metadata_issues)
+        + len(document_reference_issues)
+        + (1 if metadata_error else 0)
+    )
+
+    if issue_count:
+        print(f"- Warnings detected: {issue_count}. Run 'validate' for strict enforcement.")
+    else:
+        print("- No warnings detected. Project is ready for deeper validation or development.")
+
+
 def scaffold_project(args: argparse.Namespace) -> None:
     root = Path(args.path).expanduser().resolve()
     template_dir = TEMPLATE_ROOT / args.template
@@ -337,11 +445,30 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     validate_parser.add_argument("path", help="Project directory to validate")
     validate_parser.set_defaults(func=validate_project)
 
-    scaffold_parser = subparsers.add_parser("scaffold", help="Copy a template into the target directory")
+    scaffold_parser = subparsers.add_parser(
+        "scaffold", help="Copy a template into the target directory"
+    )
     scaffold_parser.add_argument("path", help="Project directory where the template will be applied")
     scaffold_parser.add_argument("--template", required=True, help="Template name (e.g. python-fastapi)")
     scaffold_parser.add_argument("--force", action="store_true", help="Overwrite files that already exist")
     scaffold_parser.set_defaults(func=scaffold_project)
+
+    status_parser = subparsers.add_parser(
+        "status",
+        help="Summarize the project scaffold, metadata, and known document issues",
+        description=(
+            "Summarize metadata, directory health, and referenced documents without "
+            "failing the task. Use this when you need a quick briefing before "
+            "editing or reviewing a project."
+        ),
+    )
+    status_parser.add_argument(
+        "path",
+        nargs="?",
+        default=Path.cwd(),
+        help="Project directory to inspect (default: current working directory)",
+    )
+    status_parser.set_defaults(func=status_project)
 
     lint_parser = subparsers.add_parser(
         "lint-metadata",

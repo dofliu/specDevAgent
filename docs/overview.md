@@ -4,8 +4,9 @@ specDevAgent 為 AI 協助軟體開發而設計的標準化模板。它結合 CL
 JSON Schema 與文件規範，讓代理人能夠在一致的結構下啟動、驗證與擴充專案。
 
 ## 核心元件
-- **CLI (`cli/agent_cli.py`)**：提供 `init`、`validate`、`scaffold` 與 `lint-metadata` 指令。
+- **CLI (`cli/agent_cli.py`)**：提供 `init`、`status`、`validate`、`scaffold` 與 `lint-metadata` 指令。
   - `init`：生成必要目錄與文件，並建立含預設欄位的 `project.json`。
+  - `status`：快速摘要目錄缺漏、`project.json` 內容與文件引用狀態，不會因警告中止流程，方便代理人在聊天中同步最新情況。
   - `validate`：檢查專案是否符合目錄結構、中繼資料以及文件引用規範。
   - `scaffold`：將指定樣板（如 `python-fastapi`）套用到目標資料夾，可使用 `--force` 覆寫既有檔案。
   - `lint-metadata`：針對 `project.json` 執行靜態分析，檢查名稱、描述、代理人 ID/角色與文件路徑設定。
@@ -17,7 +18,7 @@ JSON Schema 與文件規範，讓代理人能夠在一致的結構下啟動、�
 
 ## 代理人協作流程
 1. 讀取核心文件掌握需求與任務狀態。
-2. 透過 CLI 建立或驗證專案骨架，並於 `project.json` 補上正確的名稱、描述與代理人資訊。
+2. 透過 CLI 建立或驗證專案骨架，並於 `project.json` 補上正確的名稱、描述與代理人資訊；在任何變更前先執行 `status` 以瞭解缺漏與樣板建議。
 3. 根據任務使用樣板快速導入必要的程式與測試，確保 `requirements.txt` 依賴可被安裝。
 4. 執行測試並更新 `development.log` 與 `todo.md`，同時檢查 `project.json` 中文件路徑皆指向存在的檔案。
 5. 在提交前執行 `python cli/agent_cli.py lint-metadata <project-path> --check-documents`，確保 `project.json` 內容符合 JSON Schema 與路徑規範。

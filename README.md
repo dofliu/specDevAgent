@@ -21,17 +21,20 @@ python cli/agent_cli.py --help
 # 3. 初始化專案骨架（可加上 --force 重新產生）
 python cli/agent_cli.py init ./example-project
 
-# 4. 匯入樣板（目前提供 python-fastapi，必要時可加 --force）
+# 4. 產生專案狀態報告，快速掌握缺漏與樣板列表
+python cli/agent_cli.py status ./example-project
+
+# 5. 匯入樣板（目前提供 python-fastapi，必要時可加 --force）
 python cli/agent_cli.py scaffold ./example-project --template python-fastapi
 
-# 5. 驗證專案結構與中繼資料
+# 6. 驗證專案結構與中繼資料
 python cli/agent_cli.py validate ./example-project
 
-# 6. 針對 project.json 執行靜態檢查（可加 --check-documents）
+# 7. 針對 project.json 執行靜態檢查（可加 --check-documents）
 python cli/agent_cli.py lint-metadata ./example-project --check-documents
 ```
 
-> 💡 `init` 會建立 `project.json`、基礎文件與目錄結構；`scaffold` 會將樣板程式碼複製到指定資料夾；`validate` 檢查整體結構是否符合規範；`lint-metadata` 則專注於 `project.json` 的欄位格式、角色枚舉與文件路徑引用，適合在提交前快速檢查。
+> 💡 `init` 會建立 `project.json`、基礎文件與目錄結構；`status` 會列出缺少的目錄/文件、摘要 `project.json`、提醒資料夾中的文件是否存在並顯示可用樣板；`scaffold` 會將樣板程式碼複製到指定資料夾；`validate` 檢查整體結構是否符合規範；`lint-metadata` 則專注於 `project.json` 的欄位格式、角色枚舉與文件路徑引用，適合在提交前快速檢查。
 
 ### `project.json` 範例
 
@@ -74,6 +77,26 @@ python cli/agent_cli.py lint-metadata ./example-project --check-documents
 - `agents[].id` 必須為 kebab-case（例：`orchestrator-bot`），`agents[].role` 則須為 `developer`、`orchestrator`、`qa`、`researcher` 或 `reviewer` 之一。
 - `name`、`description` 與 `responsibilities` 皆需為非空字串，`documents.project` / `documents.todo` 需指向 `.md` 檔案。
 
+### Status 快速巡檢
+
+- 執行 `python cli/agent_cli.py status <project-path>` 會輸出目錄/文件缺漏、`project.json` 摘要、文件引用狀態以及可用樣板清單。
+- 指令不會因警告而結束（exit code 0），可安全地在對話中分享輸出，必要時再執行 `validate` 或 `lint-metadata` 進行嚴格檢查。
+- 範例輸出：
+  ```text
+  Project status for /tmp/project:
+  - Directory skeleton: all expected folders are present.
+  - Baseline files: all starter docs exist.
+  - Metadata: Document Scanner MVP (version 0.1.0)
+    • Agents: 2 registered — roles: developer, orchestrator
+    • Documents:
+      - log: development.log (found)
+      - project: project.md (found)
+      - todo: todo.md (found)
+  - Available templates:
+    • python-fastapi
+  - No warnings detected. Project is ready for deeper validation or development.
+  ```
+
 ### 代理人互動範例流程
 
 ```text
@@ -81,12 +104,13 @@ python cli/agent_cli.py lint-metadata ./example-project --check-documents
 
 代理人：
 1. 執行 `python cli/agent_cli.py init ./document-scanner` 建立骨架。
-2. 依需求更新 `project.json` 與 `todo.md`。
-3. 執行 `python cli/agent_cli.py scaffold ./document-scanner --template python-fastapi` 匯入 API 範本。
-4. 補上樣板所需環境：`python -m pip install -r ./document-scanner/requirements.txt`。
-5. 驗證結構：`python cli/agent_cli.py validate ./document-scanner`。
-6. 執行 `python cli/agent_cli.py lint-metadata ./document-scanner --check-documents`，確保 `project.json` 維持可讀性與一致性。
-7. 執行 `pytest` 確認樣板測試通過並於 `development.log` 記錄。
+2. 執行 `python cli/agent_cli.py status ./document-scanner`，了解缺漏檔案與可用樣板。
+3. 依需求更新 `project.json` 與 `todo.md`。
+4. 執行 `python cli/agent_cli.py scaffold ./document-scanner --template python-fastapi` 匯入 API 範本。
+5. 補上樣板所需環境：`python -m pip install -r ./document-scanner/requirements.txt`。
+6. 驗證結構：`python cli/agent_cli.py validate ./document-scanner`。
+7. 執行 `python cli/agent_cli.py lint-metadata ./document-scanner --check-documents`，確保 `project.json` 維持可讀性與一致性。
+8. 執行 `pytest` 確認樣板測試通過並於 `development.log` 記錄。
 
 使用者：下一步請完成 T002。
 
@@ -101,7 +125,7 @@ specDevAgent/
 ├─ agent.md                ← 代理人主要規範文件
 ├─ templates/              ← 語言樣板（目前提供 Python FastAPI）
 ├─ schema/                 ← JSON Schema 格式驗證
-├─ cli/                    ← CLI 工具（init / validate / scaffold）
+├─ cli/                    ← CLI 工具（init / status / validate / scaffold / lint-metadata）
 ├─ docs/                   ← 說明文件與工作流程
 │  ├─ overview.md
 │  └─ bootstrap-workflow.md
@@ -114,6 +138,7 @@ specDevAgent/
 - **任務循環（PLAN → CHANGES → TEST → GIT → LOG → DoD）**：確保每個任務皆可追蹤與驗證。
 - **文件驅動開發**：以 `project.md`, `todo.md`, `development.log` 為核心文件，確保 AI 能讀懂專案上下文。
 - **樣板支援**：提供 Python FastAPI 的最小可運行樣板（含應用程式與測試）。
+- **狀態巡檢**：`status` 指令於開發前快速列出缺漏項目、代理人角色摘要與樣板清單。
 - **Metadata 靜態分析**：`lint-metadata` 子命令確保 `project.json` 符合 JSON Schema 與角色/ID 規範，並可選擇檢查文件路徑是否存在。
 - **CI / PR 標準整合**：可依專案需求擴充 Conventional Commits、PR 驗收檢查與自動驗證。
 
