@@ -133,6 +133,18 @@ specDevAgent/
 
 ---
 
+## 🔭 下一步行動與改善建議
+最新的改進路線圖會持續整理在 [`docs/next-steps.md`](docs/next-steps.md)。重點工作流摘要如下：
+
+1. **CLI 回歸測試自動化（P0）**：以 pytest 操控 `cli/agent_cli.py`，確保 `init / scaffold / validate` 指令在 CI 中全數跑過並維持 3 分鐘內完成。
+2. **樣板套件化（P1）**：將 FastAPI 樣板拆成可版本化的套件，並允許 CLI 透過 `--template python-fastapi@x.y.z` 取得可重複的 scaffold。
+3. **代理人手冊與範例（P1）**：為文件新增完整情境對話與錯誤排除範例，並在 CLI `--help` 中加註相關章節方便查閱。
+4. **Metadata 靜態分析（P2）**：擴充 `project.schema.json`、提供 `lint-metadata` 子命令與 pre-commit 勾點，確保 `project.json` 長期維持高品質。
+
+想確認目前狀態、負責團隊或退出條件，可直接檢視該文件頂端的儀表板表格。
+
+---
+
 ## 🧾 授權與貢獻
 本專案採用 **MIT License**。
 歡迎以 Pull Request 或 Issue 的方式貢獻新範本、改進 CLI 工具、或新增語言樣板。
